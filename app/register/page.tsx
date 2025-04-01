@@ -12,12 +12,21 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/components/ui/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
+import authService from "@/api/authService"
 
 export default function RegisterPage() {
   const router = useRouter()
   const { toast } = useToast()
+
+  // Local state for form fields
   const [userType, setUserType] = useState("participant")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [company, setCompany] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [passwordStrength, setPasswordStrength] = useState(0)
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,13 +42,38 @@ export default function RegisterPage() {
     setPasswordStrength(strength)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    toast({
-      title: "Inscription réussie",
-      description: "Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.",
-    })
-    router.push("/login")
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await authService.register({
+        email,
+        password,
+        firstName,
+        lastName,
+        role: "STUDENT",
+      })
+      toast({
+        title: "Inscription réussie",
+        description: "Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.",
+      })
+      router.push("/login")
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'inscription.",
+        variant: "destructive",
+      })
+    }
   }
 
   const passwordRequirements = [
@@ -81,14 +115,28 @@ export default function RegisterPage() {
                   <User className="h-4 w-4 text-blue-500" />
                   Prénom
                 </Label>
-                <Input id="firstName" placeholder="Prénom" required className="transition-all focus:ring-2 focus:ring-blue-500" />
+                <Input 
+                  id="firstName" 
+                  placeholder="Prénom" 
+                  required 
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="transition-all focus:ring-2 focus:ring-blue-500" 
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="flex items-center gap-1 text-gray-700">
                   <User className="h-4 w-4 text-blue-500" />
                   Nom
                 </Label>
-                <Input id="lastName" placeholder="Nom" required className="transition-all focus:ring-2 focus:ring-blue-500" />
+                <Input 
+                  id="lastName" 
+                  placeholder="Nom" 
+                  required 
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="transition-all focus:ring-2 focus:ring-blue-500" 
+                />
               </div>
             </div>
 
@@ -97,7 +145,15 @@ export default function RegisterPage() {
                 <Mail className="h-4 w-4 text-blue-500" />
                 Email
               </Label>
-              <Input id="email" type="email" placeholder="nom@exemple.com" required className="transition-all focus:ring-2 focus:ring-blue-500" />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="nom@exemple.com" 
+                required 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="transition-all focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
 
             <div className="space-y-2">
@@ -105,7 +161,15 @@ export default function RegisterPage() {
                 <Phone className="h-4 w-4 text-blue-500" />
                 Téléphone
               </Label>
-              <Input id="phone" type="tel" placeholder="+33 6 12 34 56 78" required className="transition-all focus:ring-2 focus:ring-blue-500" />
+              <Input 
+                id="phone" 
+                type="tel" 
+                placeholder="+33 6 12 34 56 78" 
+                required 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="transition-all focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
 
             <div className="space-y-2">
@@ -113,7 +177,13 @@ export default function RegisterPage() {
                 <Building className="h-4 w-4 text-blue-500" />
                 Entreprise
               </Label>
-              <Input id="company" placeholder="Nom de l'entreprise" className="transition-all focus:ring-2 focus:ring-blue-500" />
+              <Input 
+                id="company" 
+                placeholder="Nom de l'entreprise" 
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="transition-all focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
 
             <div className="space-y-2">
@@ -167,7 +237,14 @@ export default function RegisterPage() {
                 <Lock className="h-4 w-4 text-blue-500" />
                 Confirmer le mot de passe
               </Label>
-              <Input id="confirmPassword" type="password" required className="transition-all focus:ring-2 focus:ring-blue-500" />
+              <Input 
+                id="confirmPassword" 
+                type="password" 
+                required 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="transition-all focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
 
             <div className="space-y-2">

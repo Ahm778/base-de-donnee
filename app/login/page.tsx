@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/components/ui/use-toast"
+import authService from "@/api/authService"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,16 +23,27 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    
-    // Simuler un appel API
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    toast({
-      title: "Connexion réussie",
-      description: `Bienvenue ${email}, vous êtes connecté en tant que ${userType}`,
-    })
-    setIsLoading(false)
-    router.push("/dashboard")
+
+    try {
+      // Call authService.login with email and password
+      const response = await authService.login({ email, password })
+      
+      toast({
+        title: "Connexion réussie",
+        description: `Bienvenue ${response.user.firstName}, vous êtes connecté en tant que ${response.user.role}`,
+      })
+
+      // Redirect to the dashboard
+      router.push("/dashboard")
+    } catch (error) {
+      toast({
+        title: "Erreur de connexion",
+        description: "Email ou mot de passe incorrect.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
