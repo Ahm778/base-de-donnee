@@ -1,45 +1,119 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { CalendarIcon, Clock, MapPin, Monitor, Users, CreditCard, BookOpen } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { CalendarIcon, Clock, MapPin, Monitor, Users, CreditCard, BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { useToast } from "@/components/ui/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import courseService from "@/api/courseService";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { fr } from "date-fns/locale"
-import { useToast } from "@/components/ui/use-toast"
-import { Checkbox } from "@/components/ui/checkbox"
+interface CourseFormData {
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  category?: string;
+  type?: string;
+  level?: string;
+  durationHours?: number;
+  address?: string;
+  room?: string;
+  capacity?: number;
+  onlineLink?: string;
+  connectionInstructions?: string;
+  cost?: number;
+  fullPayment?: boolean;
+  installmentPayment?: boolean;
+  fundingAvailable?: boolean;
+  formateurPrincipal?: string;
+  formateursAssistants?: string[];
+  heureDebut?: string;
+  heureFin?: string;
+}
 
 export default function AjouterFormationPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [formationType, setFormationType] = useState("presentiel")
-  const [dateDebut, setDateDebut] = useState<Date>()
-  const [dateFin, setDateFin] = useState<Date>()
+  const router = useRouter();
+  const { toast } = useToast();
+  const [dateDebut, setDateDebut] = useState<Date>();
+  const [dateFin, setDateFin] = useState<Date>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    toast({
-      title: "Formation créée",
-      description: "La formation a été créée avec succès",
-      variant: "default"
-    })
-    router.push("/formations")
-  }
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<CourseFormData>({
+    defaultValues: {
+      type: "presentiel",
+      category: "developpement",
+      level: "debutant",
+      heureDebut: "09:00",
+      heureFin: "17:00",
+      fullPayment: false,
+      installmentPayment: false,
+      fundingAvailable: false,
+    },
+  });
+
+  const formationType = watch("type");
+
+  useEffect(() => {
+    if (dateDebut) setValue("startDate", dateDebut.toISOString());
+  }, [dateDebut, setValue]);
+
+  useEffect(() => {
+    if (dateFin) setValue("endDate", dateFin.toISOString());
+  }, [dateFin, setValue]);
+
+  const onSubmit = async (data: CourseFormData) => {
+    setIsSubmitting(true);
+    
+    try {
+      if (!dateDebut || !dateFin) {
+        throw new Error("Les dates de début et fin sont obligatoires");
+      }
+
+      const createdCourse = await courseService.createCourse({
+        ...data,
+        startDate: dateDebut.toISOString(),
+        endDate: dateFin.toISOString(),
+      });
+      
+      toast({
+        title: "Formation créée",
+        description: "La formation a été créée avec succès",
+        variant: "default",
+      });
+      
+      router.push(`/formations/${createdCourse.id}`);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la création",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 relative">
-      {/* Fond animé avec dégradé */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-64 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-30 animate-gradient-x" />
       </div>
@@ -58,25 +132,13 @@ export default function AjouterFormationPage() {
 
       <Tabs defaultValue="informations" className="space-y-6">
         <TabsList className="bg-background/50 backdrop-blur-sm border">
-          <TabsTrigger value="informations" className="relative group">
-            Informations
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300" />
-          </TabsTrigger>
-          <TabsTrigger value="lieu" className="relative group">
-            Lieu
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300" />
-          </TabsTrigger>
-          <TabsTrigger value="formateur" className="relative group">
-            Formateur
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300" />
-          </TabsTrigger>
-          <TabsTrigger value="tarification" className="relative group">
-            Tarification
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300" />
-          </TabsTrigger>
+          <TabsTrigger value="informations">Informations</TabsTrigger>
+          <TabsTrigger value="lieu">Lieu</TabsTrigger>
+          <TabsTrigger value="formateur">Formateur</TabsTrigger>
+          <TabsTrigger value="tarification">Tarification</TabsTrigger>
         </TabsList>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <TabsContent value="informations" className="space-y-6">
             <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="bg-gradient-to-r from-blue-50/30 to-purple-50/30 border-b">
@@ -92,19 +154,21 @@ export default function AjouterFormationPage() {
                     <span>Titre de la formation</span>
                     <span className="text-red-500">*</span>
                   </Label>
-                  <Input 
-                    id="titre" 
-                    placeholder="Titre de la formation" 
-                    required 
+                  <Input
+                    id="titre"
+                    {...register("title", { required: "Le titre est obligatoire" })}
+                    placeholder="Titre de la formation"
                     className="focus:ring-2 focus:ring-blue-500/20"
                   />
+                  {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description détaillée</Label>
-                  <Textarea 
-                    id="description" 
-                    placeholder="Description de la formation" 
+                  <Textarea
+                    id="description"
+                    {...register("description")}
+                    placeholder="Description de la formation"
                     className="min-h-[120px] focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
@@ -115,43 +179,52 @@ export default function AjouterFormationPage() {
                       <span>Catégorie</span>
                       <span className="text-red-500">*</span>
                     </Label>
-                    <Select defaultValue="developpement">
+                    <Select
+                      {...register("category")}
+                      onValueChange={(value) => setValue("category", value)}
+                    >
                       <SelectTrigger id="categorie" className="focus:ring-2 focus:ring-blue-500/20">
                         <SelectValue placeholder="Sélectionner une catégorie" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="developpement" className="focus:bg-blue-50">Développement</SelectItem>
-                        <SelectItem value="management" className="focus:bg-blue-50">Management</SelectItem>
-                        <SelectItem value="design" className="focus:bg-blue-50">Design</SelectItem>
-                        <SelectItem value="marketing" className="focus:bg-blue-50">Marketing</SelectItem>
+                        <SelectItem value="developpement">Développement</SelectItem>
+                        <SelectItem value="management">Management</SelectItem>
+                        <SelectItem value="design">Design</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="type">Type</Label>
-                    <Select defaultValue="presentiel" onValueChange={setFormationType}>
+                    <Select
+                      {...register("type")}
+                      onValueChange={(value) => setValue("type", value)}
+                    >
                       <SelectTrigger id="type" className="focus:ring-2 focus:ring-blue-500/20">
                         <SelectValue placeholder="Sélectionner un type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="presentiel" className="focus:bg-blue-50">Présentiel</SelectItem>
-                        <SelectItem value="enligne" className="focus:bg-blue-50">En ligne</SelectItem>
-                        <SelectItem value="hybride" className="focus:bg-blue-50">Hybride</SelectItem>
+                        <SelectItem value="presentiel">Présentiel</SelectItem>
+                        <SelectItem value="enligne">En ligne</SelectItem>
+                        <SelectItem value="hybride">Hybride</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="niveau">Niveau</Label>
-                    <Select defaultValue="debutant">
+                    <Select
+                      {...register("level")}
+                      onValueChange={(value) => setValue("level", value)}
+                    >
                       <SelectTrigger id="niveau" className="focus:ring-2 focus:ring-blue-500/20">
                         <SelectValue placeholder="Sélectionner un niveau" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="debutant" className="focus:bg-blue-50">Débutant</SelectItem>
-                        <SelectItem value="intermediaire" className="focus:bg-blue-50">Intermédiaire</SelectItem>
-                        <SelectItem value="avance" className="focus:bg-blue-50">Avancé</SelectItem>
+                        <SelectItem value="debutant">Débutant</SelectItem>
+                        <SelectItem value="intermediaire">Intermédiaire</SelectItem>
+                        <SelectItem value="avance">Avancé</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -161,14 +234,18 @@ export default function AjouterFormationPage() {
                       <span>Durée totale (heures)</span>
                       <span className="text-red-500">*</span>
                     </Label>
-                    <Input 
-                      id="duree" 
-                      type="number" 
-                      min="1" 
-                      placeholder="24" 
-                      required 
+                    <Input
+                      id="duree"
+                      type="number"
+                      min="1"
+                      {...register("durationHours", {
+                        required: "La durée est obligatoire",
+                        valueAsNumber: true,
+                      })}
+                      placeholder="24"
                       className="focus:ring-2 focus:ring-blue-500/20"
                     />
+                    {errors.durationHours && <p className="text-sm text-red-500">{errors.durationHours.message}</p>}
                   </div>
                 </div>
 
@@ -192,11 +269,11 @@ export default function AjouterFormationPage() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 border-border shadow-lg">
-                        <Calendar 
-                          mode="single" 
-                          selected={dateDebut} 
-                          onSelect={setDateDebut} 
-                          initialFocus 
+                        <Calendar
+                          mode="single"
+                          selected={dateDebut}
+                          onSelect={setDateDebut}
+                          initialFocus
                           className="border-0"
                         />
                       </PopoverContent>
@@ -222,11 +299,11 @@ export default function AjouterFormationPage() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 border-border shadow-lg">
-                        <Calendar 
-                          mode="single" 
-                          selected={dateFin} 
-                          onSelect={setDateFin} 
-                          initialFocus 
+                        <Calendar
+                          mode="single"
+                          selected={dateFin}
+                          onSelect={setDateFin}
+                          initialFocus
                           className="border-0"
                         />
                       </PopoverContent>
@@ -242,14 +319,14 @@ export default function AjouterFormationPage() {
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-blue-500" />
                     <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="time" 
-                        defaultValue="09:00" 
+                      <Input
+                        type="time"
+                        {...register("heureDebut")}
                         className="focus:ring-2 focus:ring-blue-500/20"
                       />
-                      <Input 
-                        type="time" 
-                        defaultValue="17:00" 
+                      <Input
+                        type="time"
+                        {...register("heureFin")}
                         className="focus:ring-2 focus:ring-blue-500/20"
                       />
                     </div>
@@ -273,9 +350,10 @@ export default function AjouterFormationPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="adresse">Adresse complète</Label>
-                      <Textarea 
-                        id="adresse" 
-                        placeholder="Adresse du lieu de formation" 
+                      <Textarea
+                        id="adresse"
+                        {...register("address")}
+                        placeholder="Adresse du lieu de formation"
                         className="focus:ring-2 focus:ring-blue-500/20"
                       />
                     </div>
@@ -283,20 +361,22 @@ export default function AjouterFormationPage() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="salle">Salle</Label>
-                        <Input 
-                          id="salle" 
-                          placeholder="Numéro ou nom de la salle" 
+                        <Input
+                          id="salle"
+                          {...register("room")}
+                          placeholder="Numéro ou nom de la salle"
                           className="focus:ring-2 focus:ring-blue-500/20"
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="capacite">Capacité maximale</Label>
-                        <Input 
-                          id="capacite" 
-                          type="number" 
-                          min="1" 
-                          placeholder="20" 
+                        <Input
+                          id="capacite"
+                          type="number"
+                          min="1"
+                          {...register("capacity", { valueAsNumber: true })}
+                          placeholder="20"
                           className="focus:ring-2 focus:ring-blue-500/20"
                         />
                       </div>
@@ -308,9 +388,10 @@ export default function AjouterFormationPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="lien">Lien de la plateforme</Label>
-                      <Input 
-                        id="lien" 
-                        placeholder="https://..." 
+                      <Input
+                        id="lien"
+                        {...register("onlineLink")}
+                        placeholder="https://..."
                         className="focus:ring-2 focus:ring-blue-500/20"
                       />
                     </div>
@@ -319,6 +400,7 @@ export default function AjouterFormationPage() {
                       <Label htmlFor="instructions">Instructions de connexion</Label>
                       <Textarea
                         id="instructions"
+                        {...register("connectionInstructions")}
                         placeholder="Instructions pour se connecter à la formation en ligne"
                         className="focus:ring-2 focus:ring-blue-500/20"
                       />
@@ -344,28 +426,34 @@ export default function AjouterFormationPage() {
                     <span>Formateur principal</span>
                     <span className="text-red-500">*</span>
                   </Label>
-                  <Select defaultValue="jean-dupont">
+                  <Select
+                    {...register("formateurPrincipal")}
+                    onValueChange={(value) => setValue("formateurPrincipal", value)}
+                  >
                     <SelectTrigger id="formateur-principal" className="focus:ring-2 focus:ring-blue-500/20">
                       <SelectValue placeholder="Sélectionner un formateur" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="jean-dupont" className="focus:bg-blue-50">Jean Dupont</SelectItem>
-                      <SelectItem value="marie-martin" className="focus:bg-blue-50">Marie Martin</SelectItem>
-                      <SelectItem value="pierre-leroy" className="focus:bg-blue-50">Pierre Leroy</SelectItem>
+                      <SelectItem value="jean-dupont">Jean Dupont</SelectItem>
+                      <SelectItem value="marie-martin">Marie Martin</SelectItem>
+                      <SelectItem value="pierre-leroy">Pierre Leroy</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="formateurs-assistants">Formateurs assistants</Label>
-                  <Select>
+                  <Select
+                    {...register("formateursAssistants")}
+                    onValueChange={(value) => setValue("formateursAssistants", [value])}
+                  >
                     <SelectTrigger id="formateurs-assistants" className="focus:ring-2 focus:ring-blue-500/20">
                       <SelectValue placeholder="Sélectionner des formateurs assistants" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sophie-bernard" className="focus:bg-blue-50">Sophie Bernard</SelectItem>
-                      <SelectItem value="thomas-petit" className="focus:bg-blue-50">Thomas Petit</SelectItem>
-                      <SelectItem value="julie-moreau" className="focus:bg-blue-50">Julie Moreau</SelectItem>
+                      <SelectItem value="sophie-bernard">Sophie Bernard</SelectItem>
+                      <SelectItem value="thomas-petit">Thomas Petit</SelectItem>
+                      <SelectItem value="julie-moreau">Julie Moreau</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -389,12 +477,13 @@ export default function AjouterFormationPage() {
                 <div className="space-y-2">
                   <Label htmlFor="cout">Coût par participant</Label>
                   <div className="flex">
-                    <Input 
-                      id="cout" 
-                      type="number" 
-                      min="0" 
-                      step="0.01" 
-                      placeholder="0.00" 
+                    <Input
+                      id="cout"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      {...register("cost", { valueAsNumber: true })}
+                      placeholder="0.00"
                       className="rounded-r-none focus:ring-2 focus:ring-blue-500/20"
                     />
                     <div className="flex items-center justify-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
@@ -407,19 +496,31 @@ export default function AjouterFormationPage() {
                   <Label>Options de paiement</Label>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="paiement-complet" />
+                      <Checkbox
+                        id="paiement-complet"
+                        {...register("fullPayment")}
+                        onCheckedChange={(checked) => setValue("fullPayment", Boolean(checked))}
+                      />
                       <Label htmlFor="paiement-complet" className="text-sm font-normal leading-none">
                         Paiement complet
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="paiement-echelonne" />
+                      <Checkbox
+                        id="paiement-echelonne"
+                        {...register("installmentPayment")}
+                        onCheckedChange={(checked) => setValue("installmentPayment", Boolean(checked))}
+                      />
                       <Label htmlFor="paiement-echelonne" className="text-sm font-normal leading-none">
                         Paiement échelonné
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="prise-en-charge" />
+                      <Checkbox
+                        id="prise-en-charge"
+                        {...register("fundingAvailable")}
+                        onCheckedChange={(checked) => setValue("fundingAvailable", Boolean(checked))}
+                      />
                       <Label htmlFor="prise-en-charge" className="text-sm font-normal leading-none">
                         Prise en charge (OPCO, CPF, etc.)
                       </Label>
@@ -428,18 +529,20 @@ export default function AjouterFormationPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between pt-6">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => router.push("/formations")}
                   className="border-muted-foreground/30 hover:border-blue-500/50 hover:text-blue-600"
+                  type="button"
                 >
                   Annuler
                 </Button>
-                <Button 
+                <Button
                   type="submit"
                   className="bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-md hover:shadow-lg transition-all"
+                  disabled={isSubmitting}
                 >
-                  Créer la formation
+                  {isSubmitting ? "Création en cours..." : "Créer la formation"}
                 </Button>
               </CardFooter>
             </Card>
@@ -447,5 +550,5 @@ export default function AjouterFormationPage() {
         </form>
       </Tabs>
     </div>
-  )
+  );
 }
